@@ -80,49 +80,84 @@
     .navlinks {display:flex;gap:8px;flex-wrap:wrap;margin:0 0 13px}
     .navlinks a {text-decoration:none;color:var(--accent);padding:7px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:12px}
     
+    .hero-card { border-color:#3d6f68; background:linear-gradient(180deg,#142c35 0%,#10232c 100%); }
+    .hero-card h2 { margin-bottom:8px; }
+    .quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0; }
+    .quick-stat { background:#0b202a; border-radius:11px; padding:10px; min-width:0; }
+    .quick-stat strong { display:block; font-size:18px; overflow-wrap:anywhere; }
+    .quick-stat small { display:block; margin-top:2px; }
+    .simple-steps { margin:10px 0 0; padding-left:22px; line-height:1.5; }
+    .simple-steps li { margin-bottom:5px; }
+    .advanced-panel { margin-top:12px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#0f2029; }
+    .advanced-panel > summary { cursor:pointer; color:var(--accent); font-weight:700; }
+    .advanced-only { display:none !important; }
+    .source-line { display:block; margin-top:10px; }
+    @media(max-width:600px) { .quick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media(max-width:430px) { h1{font-size:23px}.card{padding:13px}.stat{padding:8px}.stat .value{font-size:17px}.row3{grid-template-columns:repeat(2,minmax(0,1fr))} }
   </style>
 </head>
 <body>
-<header><div class="inner"><h1>RaceLab</h1><div class="intro">Free personal racing experiment · v0.4 · race-day cockpit · paper-first</div></div></header>
+<header><div class="inner"><h1>RaceLab</h1><div class="intro">Race-day view · GitHub Actions data · paper-only</div></div></header>
 <main>
-  <nav class="navlinks" aria-label="Sections"><a href="#runbook">Race-day cockpit</a><a href="#analysis">Probability model</a><a href="#journal">Paper journal</a><a href="#review">Review</a></nav>
-  <div class="notice" style="margin-bottom:14px"><strong>No live feed.</strong> Meeting schedules are preloaded. Dated personal racecard snapshots can be merged below; they do not update automatically. Recheck all race-day changes. Odds are never invented. Data stays in this browser unless you export it.</div>
+  <nav class="navlinks" aria-label="Sections"><a href="#today">At a glance</a><a href="#runbook">Race status</a><a href="#journal">Paper journal</a><a href="#review">After the race</a></nav>
+  <section class="card hero-card" id="today">
+    <div class="flex between"><h2>What matters now</h2><span class="pill" id="dataStatusPill">Checking GitHub…</span></div>
+    <div id="beginnerSummary" class="notice">Loading the latest race data from GitHub…</div>
+    <div class="quick-grid" id="beginnerFacts">
+      <div class="quick-stat"><small>Race</small><strong>—</strong></div>
+      <div class="quick-stat"><small>Field</small><strong>—</strong></div>
+      <div class="quick-stat"><small>Track</small><strong>—</strong></div>
+      <div class="quick-stat"><small>Odds</small><strong>—</strong></div>
+    </div>
+    <div class="notice">
+      <strong>Simple race-day routine</strong>
+      <ol class="simple-steps">
+        <li>Choose the race you want to watch.</li>
+        <li>Check the update time, track, withdrawals and odds coverage.</li>
+        <li>Use the market snapshot as information, not a guaranteed tip.</li>
+        <li>Only log a paper experiment if the data is complete enough for you.</li>
+      </ol>
+    </div>
+    <small class="source-line" id="beginnerSource">GitHub data source: checking…</small>
+  </section>
 
   <section class="card">
-    <h2>1 · Meeting & race</h2>
+    <h2>Choose meeting and race</h2>
     <div class="row2">
       <div class="field"><label for="meeting">Meeting</label><select id="meeting"></select></div>
       <div class="field"><label for="race">Race</label><select id="race"></select></div>
     </div>
     <p id="raceDetails" class="muted"></p><p id="fieldProvenance" class="intro"></p>
-    <div class="flex"><button type="button" class="secondary mini" id="newMeeting">+ Meeting</button><button type="button" class="secondary mini" id="newRace">+ Race</button><button type="button" class="secondary mini" id="editRace">Edit race</button></div>
-    <div style="margin-top:14px" class="row2">
-      <div class="field"><label for="expectedCount">Confirmed active field size</label><input id="expectedCount" type="number" min="1" max="40" placeholder="Check official field" /></div>
-      <div class="field"><label for="track">Track condition (manual)</label><input id="track" placeholder="e.g. Soft 5 · unknown" /></div>
-      <div class="field"><label for="trackSource">Track source / checked time</label><input id="trackSource" placeholder="e.g. official site · 08:10 AEDT" /></div>
-    </div>
-    <div style="margin-top:9px"><button type="button" id="saveTrack" class="secondary mini">Save meeting / race facts</button></div>
+    <details class="advanced-panel">
+      <summary>Advanced: edit meeting data manually</summary>
+      <div class="flex" style="margin-top:10px"><button type="button" class="secondary mini" id="newMeeting">+ Meeting</button><button type="button" class="secondary mini" id="newRace">+ Race</button><button type="button" class="secondary mini" id="editRace">Edit race</button></div>
+      <div style="margin-top:14px" class="row2">
+        <div class="field"><label for="expectedCount">Confirmed active field size</label><input id="expectedCount" type="number" min="1" max="40" placeholder="Check official field" /></div>
+        <div class="field"><label for="track">Track condition (manual)</label><input id="track" placeholder="e.g. Soft 5 · unknown" /></div>
+        <div class="field"><label for="trackSource">Track source / checked time</label><input id="trackSource" placeholder="e.g. official site · 08:10 AEDT" /></div>
+      </div>
+      <div style="margin-top:9px"><button type="button" id="saveTrack" class="secondary mini">Save meeting / race facts</button></div>
+    </details>
   </section>
 
   <section class="card" id="runbook">
-    <div class="flex between"><h2>Phase 5 · Race-day cockpit</h2><span class="pill" id="runbookClock">Melbourne time</span></div>
-    <div class="notice" id="storageNotice"><strong>Personal, local data.</strong> GitHub publishes the code only, not the horses, odds or backups stored on your phone. A JSON backup is not automatically imported. Data is never a live feed.</div>
+    <div class="flex between"><h2>Race-day status</h2><span class="pill" id="runbookClock">Melbourne time</span></div>
+    <div class="notice" id="storageNotice"><strong>Automated data.</strong> GitHub Actions loads the racecard and market snapshot from PuntersEdge. RaceLab does not place bets; treat every price as a timestamped snapshot.</div>
     <div class="cockpit-stats" aria-label="Data registered on this device">
-      <div class="cockpit-stat"><small>Races with runners</small><strong id="dayFields">0/10</strong></div>
-      <div class="cockpit-stat"><small>Saved runners</small><strong id="dayRunners">0</strong></div>
-      <div class="cockpit-stat"><small>Fully priced races</small><strong id="dayPriced">0/10</strong></div>
+      <div class="cockpit-stat"><small>Races loaded</small><strong id="dayFields">0/10</strong></div>
+      <div class="cockpit-stat"><small>Runners loaded</small><strong id="dayRunners">0</strong></div>
+      <div class="cockpit-stat"><small>Races with odds</small><strong id="dayPriced">0/10</strong></div>
     </div>
     <p id="dayReadiness" class="notice warning" role="status">Checking the information saved on this phone…</p>
-    <div class="flex"><button class="secondary mini" id="githubImportSnapshot" type="button">Refresh GitHub data</button><button class="secondary mini" id="cockpitImportSnapshot" type="button">Import local racecard JSON</button><button class="secondary mini" id="cockpitRestore" type="button">Restore my backup JSON</button><button class="secondary mini" id="cockpitRefresh" type="button">Refresh status</button></div>
-    <small>An import is manual and local. Confirm the official field, withdrawals and prices again on race day. Restoring a full backup replaces existing browser data after confirmation; a racecard merge preserves existing data.</small>
-    <h3 style="margin-top:18px">All races · saved-data status</h3>
-    <p class="muted">Shows what <em>this browser</em> knows. A green indicator means the data passed local checks, not that the information is officially confirmed.</p>
+    <div class="flex"><button class="secondary mini" id="githubImportSnapshot" type="button">Refresh GitHub data</button><button class="secondary mini" id="cockpitRefresh" type="button">Check status</button><button class="secondary mini advanced-only" id="cockpitImportSnapshot" type="button">Import local racecard JSON</button><button class="secondary mini advanced-only" id="cockpitRestore" type="button">Restore my backup JSON</button></div>
+    <small>Refresh GitHub data if you want to see the latest published snapshot. The final pre-race refresh is handled automatically by GitHub Actions.</small>
+    <h3 style="margin-top:18px">Today’s races</h3>
+    <p class="muted">Shows what GitHub Actions loaded. A green indicator means the data passed local checks; it is not a guarantee that the official situation cannot change.</p>
     <div id="dayRaceList"></div>
     <h3 style="margin-top:18px">Selected race checklist</h3>
     <div id="selectedGates" class="notice warning">Select a race to inspect.</div>
     <div id="racePlan" style="margin-top:12px"></div>
-    <details style="margin-top:16px" open><summary style="cursor:pointer;font-weight:700">Race-day workflow</summary>
+    <details style="margin-top:16px"><summary style="cursor:pointer;font-weight:700">Race-day workflow</summary>
       <ol class="runbook-steps">
         <li><strong>8:00 am Melbourne:</strong> Consult official acceptances/scratchings and track updates; verify the expected active field for any races you want to study. This is a planning checkpoint, not a guarantee that official updates have been released.</li>
         <li><strong>60 minutes before the scheduled jump:</strong> Review relevant form and write down sources. Keep uncertain ratings blank. Choose a race; you do not need to analyse all ten.</li>
@@ -139,7 +174,9 @@
 
   <section class="card">
     <div class="flex between"><h2>2 · Runners</h2><span class="pill" id="runnerCount">0 runners</span></div>
-    <p class="muted">Add runners individually, paste several, or merge a racecard snapshot. These snapshots are not live data.</p>
+    <p class="muted">Runner data is loaded automatically from GitHub. Manual editing is only for advanced experiments.</p>
+    <details class="advanced-panel">
+      <summary>Advanced: edit runners manually</summary>
     <div class="notice" style="margin-bottom:14px"><strong>Load personal racecard JSON</strong><p class="muted">Merge new runners from the downloaded snapshot. Your existing odds and statuses are preserved. Confirm all entries against official sources before any decision.</p><button type="button" class="secondary mini" id="racecardImportButton">Import racecard snapshot</button><input type="file" id="racecardImportFile" accept=".json,application/json" style="display:none"></div>
     <form id="runnerForm">
       <div class="row3">
@@ -161,11 +198,12 @@
     </details>
     <hr />
     <div id="runners"></div>
+    </details>
   </section>
 
   <section class="card">
-    <h2>3 · Market baseline</h2>
-    <p class="muted">This is mathematics based only on the prices you enter, not a prediction model. The normalized bookmaker market is the baseline. The experimental model below applies small, documented form adjustments; it is not calibrated.</p>
+    <h2>Market snapshot</h2>
+    <p class="muted">These are the current prices converted into approximate market shares. This is information about the market, not a prediction or recommendation. The optional experimental model is kept below for later review.</p>
     <div class="stats">
       <div class="stat"><div class="caption">Active runners</div><div class="value" id="activeCount">0</div></div>
       <div class="stat"><div class="caption">Odds entered</div><div class="value" id="pricedCount">0</div></div>
@@ -176,8 +214,10 @@
   </section>
 
   <section class="card" id="analysis">
-    <h2>4 · Experimental probability model</h2>
-    <p class="muted">Score evidence on a 0–5 scale; leave unknown factors blank. All feature weights are hypotheses, not fitted coefficients. A missing score contributes no adjustment. The hybrid starts from normalized bookmaker prices, so odds for the <strong>entire active field</strong> are required.</p>
+    <h2>Optional: experimental probability model</h2>
+    <p class="muted">This section is optional. The automated market snapshot above is the simplest view; use this model only when you want to record your own evidence ratings.</p>
+    <details class="advanced-panel">
+      <summary>Open the experimental model</summary>
     <div class="row2">
       <div class="field"><label for="profile">Distance profile</label><input id="profile" disabled /></div>
       <div class="field"><label for="gamma">Model influence γ: <span id="gammaLabel">0.25</span></label><input id="gamma" type="range" min="0" max="1" step="0.05" value="0.25" /></div>
@@ -199,11 +239,12 @@
     <div id="modelTable"></div>
     <div class="flex" style="margin-top:14px"><button type="button" id="freezeForecast">Freeze forecast snapshot</button><span id="freezeStatus" class="muted" style="font-size:12px"></span></div>
     <small>Freezing stores the probabilities, odds, weights and source notes at a point in time. Predictions saved after the scheduled jump are marked retrospective and excluded from prospective accuracy metrics. A race can be frozen only once.</small>
+    </details>
   </section>
 
   <section class="card" id="journal">
-    <h2>5 · Paper betting journal</h2>
-    <p class="muted">Simulated WIN bets only; no bookmaker integration, deposits or real-money betting. Set a fixed maximum experimental budget. Flat stake is a starting amount, not a recommendation.</p>
+    <h2>Paper-only journal</h2>
+    <p class="muted">Optional: record a hypothetical WIN experiment. This never connects to a bookmaker or places a real bet.</p>
     <div class="row2">
       <div class="field"><label for="bankroll">Paper budget (AUD)</label><input id="bankroll" type="number" min="0" max="10000" step="1" /></div>
       <div class="field"><label for="flatStake">Flat paper stake (AUD)</label><input id="flatStake" type="number" min="0.01" max="10000" step="0.5" /></div>
@@ -223,8 +264,10 @@
   </section>
 
   <section class="card" id="review">
-    <h2>6 · Race results & forecast evaluation</h2>
-    <p class="muted">Record the official winner after the race. Evaluation uses the frozen forecast, not the current edited ratings. A one-race outcome cannot establish model accuracy or a profitable edge.</p>
+    <h2>After the race: results and review</h2>
+    <p class="muted">Use this after the race to record the official result and review the experiment. One race cannot prove accuracy or profitability.</p>
+    <details class="advanced-panel">
+      <summary>Open result and evaluation tools</summary>
     <div class="row2">
       <div class="field"><label for="winner">Official winning runner</label><select id="winner"></select></div>
       <div class="field"><label for="resultSource">Result source and verified time</label><input id="resultSource" placeholder="e.g. Racing Australia · 16:15 AEDT" /></div>
@@ -239,13 +282,17 @@
       <div class="stat"><div class="caption">Hybrid avg Brier</div><div class="value" id="evalModel">—</div></div>
     </div>
     <div id="evalSummary" class="muted"></div>
+    </details>
   </section>
 
   <section class="card">
-    <h2>7 · Backup & portability</h2>
-    <p class="muted">Your data is stored on this device, in this browser, under this site's address. Export a backup after every session. Import overwrites the current local dataset only after confirmation.</p>
+    <h2>Advanced: backup & portability</h2>
+    <p class="muted">Not needed for normal use. Your private paper notes remain in this browser; export only if you want a personal backup.</p>
+    <details class="advanced-panel">
+      <summary>Show backup tools</summary>
     <div class="flex"><button type="button" id="export">Export JSON backup</button><button type="button" class="secondary" id="importButton">Import JSON backup</button><input id="importFile" type="file" accept=".json,application/json" style="display:none" /></div>
     <p id="saveStatus" class="intro" aria-live="polite"></p>
+    </details>
   </section>
   <p class="disclaimer">Educational use only. No recommendations, automated bets, or guaranteed outcomes. Use an affordable fixed loss limit if you choose to wager. Australia: Gambling Help Online, 1800 858 858. The app is not affiliated with racing authorities or bookmakers.</p>
 </main>
@@ -374,6 +421,9 @@ $('export').addEventListener('click',()=>{
 });
 function mergeRacecardSnapshot(data,refreshMarket=false){
   if(data.version!==1||!Array.isArray(data.meetings))throw Error('Not a RaceLab v1 file');
+  if(data.generatedAt)db.dataGeneratedAt=String(data.generatedAt);
+  if(data.dataSource)db.dataSource=String(data.dataSource);
+  if(data.dataSourceUrl)db.dataSourceUrl=String(data.dataSourceUrl);
   let added=0,updated=0,conflicts=0;
   for(const sm of data.meetings){
     if(!sm||typeof sm.id!=='string'||!Array.isArray(sm.races))throw Error('Invalid meeting');
@@ -656,8 +706,34 @@ function updateRunbookClock(){
   const fmt=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
   el.textContent=fmt.format(new Date())+' Melbourne';
 }
+function renderBeginnerSummary(m,r){
+  const runners=Array.isArray(r.runners)?r.runners:[];
+  const active=runners.filter(h=>!h.scratched);
+  const scratched=runners.length-active.length;
+  const priced=active.filter(h=>Number(h.odds)>1).length;
+  const market=marketStatus(active,r);
+  const generated=db.dataGeneratedAt||'';
+  const generatedAt=generated&&Date.parse(generated)?generated:null;
+  const ageMinutes=generatedAt?Math.max(0,(Date.now()-Date.parse(generated))/60000):null;
+  const freshness=ageMinutes===null?'Update time unknown':ageMinutes<15?'Updated recently':ageMinutes<120?'Updated earlier':'Update may be stale';
+  const ready=active.length>0&&priced===active.length&&market.valid;
+  const track=m.track||'Not recorded';
+  const timing=nextStage(m,r);
+  $('dataStatusPill').textContent=generatedAt?'Updated '+stamp(generated):'Update time unknown';
+  $('beginnerSummary').className='notice '+(ready?'':'warning');
+  $('beginnerSummary').innerHTML=ready?
+    '<strong>R'+safe(r.number)+' · '+safe(r.name)+'</strong><br>'+safe(timing)+'. The field and prices are loaded; review the warnings below before treating this as a complete paper snapshot.':
+    '<strong>R'+safe(r.number)+' · '+safe(r.name)+'</strong><br>Data is incomplete for a full market snapshot: '+safe(!active.length?'no active runners loaded':priced+' of '+active.length+' active runners have odds')+'. Use the status panel for the exact gap.';
+  $('beginnerFacts').innerHTML=
+    '<div class="quick-stat"><small>Race</small><strong>R'+safe(r.number)+' · '+safe(r.time||'—')+'</strong><small>'+safe(r.distance||'—')+'m</small></div>'+
+    '<div class="quick-stat"><small>Field</small><strong>'+active.length+'</strong><small>'+scratched+' scratched · '+priced+' priced</small></div>'+
+    '<div class="quick-stat"><small>Track</small><strong>'+safe(track)+'</strong><small>'+safe(m.venue||'')+'</small></div>'+
+    '<div class="quick-stat"><small>Odds</small><strong>'+safe(market.quality?'Consistent':'Check quality')+'</strong><small>'+safe(freshness)+'</small></div>';
+  $('beginnerSource').textContent=(db.dataSource||'GitHub Actions data')+' · '+(generatedAt?stamp(generated):'timestamp unavailable')+'. Prices are snapshots, not live guarantees.';
+}
 function renderRunbook(m,r){
   updateRunbookClock();
+  renderBeginnerSummary(m,r);
   const statuses=m.races.map(q=>({r:q,s:localRaceStatus(q)}));
   $('dayFields').textContent=statuses.filter(x=>x.s.total>0).length+'/'+statuses.length;
   $('dayRunners').textContent=statuses.reduce((n,x)=>n+x.s.total,0);
