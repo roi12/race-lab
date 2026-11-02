@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1620" />
+  <meta name="description" content="RaceLab: a private, browser-based horse racing probability learning experiment." />
+  <title>RaceLab · Racing experiment</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; --bg:#08121b; --panel:#13232f; --line:#29404e; --text:#edf3f6; --muted:#b1c1c9; --accent:#8fe0ca; --danger:#ffc7bf; }
+    * { box-sizing: border-box; }
+    body { margin:0; color:var(--text); background:var(--bg); font-size:15px; }
+    header { background:#0d1c27; border-bottom:1px solid var(--line); padding:17px 16px; }
+    main, .inner { max-width:860px; margin:auto; }
+    h1 { font-size:26px; letter-spacing:-.6px; margin:0; }
+    h2 { margin:0 0 14px; font-size:19px; }
+    h3 { font-size:16px; margin:0; }
+    p { line-height:1.5; }
+    .muted, small { color:var(--muted); }
+    .intro { font-size:12px; color:var(--muted); margin-top:3px; }
+    main { padding:14px 14px 60px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:15px; padding:16px; margin-bottom:14px; }
+    .flex { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+    .between { justify-content:space-between; }
+    label { display:block; font-weight:600; font-size:13px; margin:0 0 6px; }
+    input, select, textarea, button { font:inherit; }
+    input, select, textarea { width:100%; background:#091923; color:var(--text); border:1px solid #3a5664; border-radius:9px; padding:11px; min-height:42px; }
+    input::placeholder, textarea::placeholder { color:#8d9faa; }
+    input:focus, textarea:focus, select:focus, button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    textarea { resize:vertical; min-height:100px; }
+    button { cursor:pointer; background:var(--accent); border:1px solid transparent; color:#091923; border-radius:9px; font-weight:700; padding:10px 12px; min-height:42px; }
+    button.secondary { color:var(--text); background:#213744; border-color:#3a5361; }
+    button.danger { background:#543133; color:#ffe9e5; border-color:#855b5a; }
+    button.mini { font-size:12px; padding:6px 9px; min-height:35px; }
+    .row2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .row3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .field { min-width:0; }
+    .pill { display:inline-block; background:#29413f; color:#b6f4e0; border-radius:30px; font-size:12px; font-weight:700; padding:4px 8px; }
+    .notice { border-left:3px solid var(--accent); padding:8px 11px; background:#172d36; border-radius:5px; font-size:13px; line-height:1.45; }
+    .warning { border-left-color:#e3b970; background:#322b22; }
+    .runner { background:#0c1d28; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; }
+    .runner.scratched { opacity:.58; }
+    .runnerhead { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+    .runnername { font-weight:700; overflow-wrap:anywhere; }
+    .runner-detail { font-size:12px; color:var(--muted); margin-top:4px; }
+    .betinfo { font-size:12px; color:var(--muted); margin-top:7px; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
+    .stat { background:#0b202a; border-radius:11px; padding:11px; }
+    .stat .value { font-size:20px; font-weight:800; margin-top:3px; }
+    .stat .caption { font-size:11px; color:var(--muted); }
+    .empty { padding:18px 8px; text-align:center; color:var(--muted); }
+    .hidden { display:none !important; }
+    hr { height:1px; border:none; background:var(--line); margin:16px 0; }
+    .disclaimer { color:var(--muted); font-size:12px; line-height:1.5; }
+    @media(max-width:430px) { h1{font-size:23px}.card{padding:13px}.stat{padding:8px}.stat .value{font-size:17px}.row3{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  </style>
+</head>
+<body>
+<header><div class="inner"><h1>RaceLab</h1><div class="intro">Free personal racing experiment · Phase 3 foundation · paper-first</div></div></header>
+<main>
+  <div class="notice" style="margin-bottom:14px"><strong>No live feed.</strong> Meeting schedules are preloaded; horse names, scratchings, form and odds must be entered from sources you check. Odds are never invented. Data stays in this browser unless you export it.</div>
+
+  <section class="card">
+    <h2>1 · Meeting & race</h2>
+    <div class="row2">
+      <div class="field"><label for="meeting">Meeting</label><select id="meeting"></select></div>
+      <div class="field"><label for="race">Race</label><select id="race"></select></div>
+    </div>
+    <p id="raceDetails" class="muted"></p>
+    <div class="flex"><button type="button" class="secondary mini" id="newMeeting">+ Meeting</button><button type="button" class="secondary mini" id="newRace">+ Race</button><button type="button" class="secondary mini" id="editRace">Edit race</button></div>
+    <div style="margin-top:14px" class="row2">
+      <div class="field"><label for="expectedCount">Confirmed active field size</label><input id="expectedCount" type="number" min="1" max="40" placeholder="Check official field" /></div>
+      <div class="field"><label for="track">Track condition (manual)</label><input id="track" placeholder="e.g. Soft 5 · unknown" /></div>
+      <div class="field"><label for="trackSource">Track source / checked time</label><input id="trackSource" placeholder="e.g. official site · 08:10 AEDT" /></div>
+    </div>
+    <div style="margin-top:9px"><button type="button" id="saveTrack" class="secondary mini">Save meeting / race facts</button></div>
+  </section>
+
+  <section class="card">
+    <div class="flex between"><h2>2 · Runners</h2><span class="pill" id="runnerCount">0 runners</span></div>
+    <p class="muted">Add runners individually, or paste several using the import format below. No official fields or current prices are included automatically.</p>
+    <form id="runnerForm">
+      <div class="row3">
+        <div class="field"><label for="horseNo">No.</label><input id="horseNo" type="number" min="1" max="99" required placeholder="1" /></div>
+        <div class="field"><label for="horseName">Horse name</label><input id="horseName" required placeholder="Actual runner name" /></div>
+        <div class="field"><label for="horseOdds">Fixed win odds</label><input id="horseOdds" type="number" min="1.01" step="0.01" placeholder="Unknown" /></div>
+        <div class="field"><label for="horseBarrier">Barrier</label><input id="horseBarrier" type="number" min="1" max="99" placeholder="Unknown" /></div>
+        <div class="field"><label for="horseWeight">Weight (kg)</label><input id="horseWeight" type="number" min="40" max="75" step="0.1" placeholder="Unknown" /></div>
+        <div class="field"><label for="horseJockey">Jockey (optional)</label><input id="horseJockey" placeholder="Unknown" /></div>
+        <div class="field"><label for="horseTrainer">Trainer (optional)</label><input id="horseTrainer" placeholder="Unknown" /></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label for="oddsSource">Odds source (bookmaker or page)</label><input id="oddsSource" placeholder="e.g. public odds page · manual reading" /></div>
+      <div style="margin-top:10px"><button type="submit">Add runner</button></div>
+    </form>
+    <details style="margin-top:15px"><summary style="cursor:pointer;font-weight:700">Bulk add runners (quicker on mobile)</summary>
+      <p class="muted">One runner per line: <code>number|name|barrier|weight|odds</code>. Leave an unknown field blank. Existing numbers are skipped. All values must come from your own checked source.</p>
+      <textarea id="bulkInput" placeholder="number|name|barrier|weight|odds"></textarea>
+      <button type="button" id="bulkAdd" class="secondary mini" style="margin-top:8px">Import pasted runners</button>
+    </details>
+    <hr />
+    <div id="runners"></div>
+  </section>
+
+  <section class="card">
+    <h2>3 · Market baseline</h2>
+    <p class="muted">This is mathematics based only on the prices you enter, not a prediction model. Phase 4 will add adjustable form ratings, estimated win probabilities and paper-bet tracking.</p>
+    <div class="stats">
+      <div class="stat"><div class="caption">Active runners</div><div class="value" id="activeCount">0</div></div>
+      <div class="stat"><div class="caption">Odds entered</div><div class="value" id="pricedCount">0</div></div>
+      <div class="stat"><div class="caption">Overround</div><div class="value" id="overround">—</div></div>
+    </div>
+    <div id="marketWarning" class="notice warning">Enter prices for all active runners before interpreting market shares.</div>
+    <div id="marketTable"></div>
+  </section>
+
+  <section class="card">
+    <h2>4 · Backup & portability</h2>
+    <p class="muted">Your data is stored on this device, in this browser, under this site's address. Export a backup after every session. Import overwrites the current local dataset only after confirmation.</p>
+    <div class="flex"><button type="button" id="export">Export JSON backup</button><button type="button" class="secondary" id="importButton">Import JSON backup</button><input id="importFile" type="file" accept=".json,application/json" style="display:none" /></div>
+    <p id="saveStatus" class="intro" aria-live="polite"></p>
+  </section>
+  <p class="disclaimer">Educational use only. No recommendations, automated bets, or guaranteed outcomes. Use an affordable fixed loss limit if you choose to wager. Australia: Gambling Help Online, 1800 858 858. The app is not affiliated with racing authorities or bookmakers.</p>
+</main>
+<script>
+'use strict';
+const KEY = 'racelab-v1';
+const PROGRAM = [
+  [1,'Darley Maribyrnong Plate','10:45',1000],
+  [2,'Pin & Win Community Handicap','11:20',2000],
+  [3,'TAB One Pool Trophy','12:00',1800],
+  [4,'The Schweppervescence Plate','12:40',1000],
+  [5,'Australian Heritage Cup','13:20',2800],
+  [6,'Asahi Super Dry Plate','13:55',1800],
+  [7,'Lexus Melbourne Cup','15:00',3200],
+  [8,'Crown Amanda Elliott','15:50',1400],
+  [9,'The Hong Kong Jockey Club Stakes','16:35',1400],
+  [10,'Channel 9 Trophy','17:15',1400]
+];
+const DEFAULT = () => ({version:1, currentMeeting:'flemington-2026-11-03',currentRace:7, meetings:[{
+  id:'flemington-2026-11-03',venue:'Flemington',date:'2026-11-03',track:'',trackSource:'',
+  programSource:'Victoria Racing Club race-day schedule · checked 2026-11-02 AEDT',
+  races:PROGRAM.map(([number,name,time,distance])=>({number,name,time,distance,runners:[]}))
+}]});
+let db;
+try { db = JSON.parse(localStorage.getItem(KEY)) || DEFAULT(); if(!db || !Array.isArray(db.meetings) || !db.meetings.length) throw Error('Invalid data'); }
+catch(e) { db=DEFAULT(); alert('Stored data could not be read. A fresh view was opened; old data has not been intentionally overwritten.'); }
+const $ = id => document.getElementById(id);
+const safe = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stamp = iso => iso ? new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso))+' AEDT/AEST' : 'not recorded';
+const currentMeeting = () => db.meetings.find(m=>m.id===db.currentMeeting) || db.meetings[0];
+const currentRace = () => currentMeeting().races.find(r=>r.number===Number(db.currentRace)) || currentMeeting().races[0];
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(db)); $('saveStatus').textContent='Saved locally · '+stamp(new Date().toISOString());}catch(e){$('saveStatus').textContent='Storage failed; export a backup and check browser storage settings.';} }
+function render(){
+  const m=currentMeeting(); const r=currentRace(); db.currentMeeting=m.id; db.currentRace=r.number;
+  $('meeting').innerHTML=db.meetings.map(m=>`<option value="${safe(m.id)}">${safe(m.venue)} · ${safe(m.date)}</option>`).join('');
+  $('meeting').value=m.id;
+  $('race').innerHTML=m.races.map(r=>`<option value="${r.number}">R${r.number} · ${safe(r.name)} (${r.time||'?'} · ${r.distance||'?'}m)</option>`).join('');
+  $('race').value=String(r.number);
+  $('raceDetails').textContent=`Race ${r.number} · ${r.distance||'Unknown'}m · ${r.time||'Unknown'} Melbourne time · programme sourced from VRC (check for changes)`;
+  $('expectedCount').value=r.expectedCount||''; $('track').value=m.track||''; $('trackSource').value=m.trackSource||'';
+  const runners=r.runners||[]; const active=runners.filter(h=>!h.scratched);
+  $('runnerCount').textContent=runners.length+' entered'; $('activeCount').textContent=active.length;
+  $('pricedCount').textContent=active.filter(h=>Number(h.odds)>1).length;
+  if(!runners.length) $('runners').innerHTML='<div class="empty">No runner data entered. Start with the runners you want to study.</div>';
+  else $('runners').innerHTML=[...runners].sort((a,b)=>a.no-b.no).map(h=>`<div class="runner ${h.scratched?'scratched':''}">
+    <div class="runnerhead"><div><div class="runnername">#${h.no} ${safe(h.name)} ${h.scratched?'<span class="pill">Scratched</span>':''}</div><div class="runner-detail">Barrier ${safe(h.barrier||'unknown')} · ${safe(h.weight||'unknown')}kg${h.jockey?' · J: '+safe(h.jockey):''}${h.trainer?' · T: '+safe(h.trainer):''}</div></div><button type="button" class="secondary mini" data-delete="${h.no}" aria-label="Delete ${safe(h.name)}">Remove</button></div>
+    <div class="row2"><div class="field"><label for="odds-${h.no}">Fixed win odds</label><input id="odds-${h.no}" data-odds="${h.no}" inputmode="decimal" type="number" min="1.01" step="0.01" ${h.scratched?'disabled':''} value="${h.odds||''}" placeholder="Unknown" /></div>
+    <div class="field"><label for="scratch-${h.no}">Runner status</label><select id="scratch-${h.no}" data-scratch="${h.no}"><option value="active" ${!h.scratched?'selected':''}>Active</option><option value="scratched" ${h.scratched?'selected':''}>Scratched</option></select></div></div>
+    <div class="betinfo">${h.odds?`Odds: ${safe(h.oddsSource||'source not recorded')} · ${stamp(h.oddsAt)}`:'Odds not entered'}</div>
+  </div>`).join('');
+  renderMarket(active,r);
+}
+function renderMarket(active,r){
+  const priced=active.filter(h=>Number(h.odds)>1); const expected=Number(r.expectedCount)||0;
+  const all=expected>0 && active.length===expected && priced.length===active.length;
+  const book=priced.reduce((s,h)=>s+100/Number(h.odds),0);
+  $('overround').textContent=all ? (book-100>=0?'+':'')+(book-100).toFixed(1)+'%' : '—';
+  $('marketWarning').textContent=all ? 'Full stated field priced. Normalized shares are a market baseline, not predictions. For a valid comparison, use one bookmaker and prices observed close in time.' : `Incomplete market: ${active.length} active runners entered, ${priced.length} priced, ${expected||'unknown'} expected. Set the official active field size above and price every active runner to calculate normalized shares and overround.`;
+  $('marketWarning').className=all?'notice':'notice warning';
+  $('marketTable').innerHTML=priced.sort((a,b)=>Number(a.odds)-Number(b.odds)).map(h=>`<div class="flex between" style="border-bottom:1px solid var(--line);padding:11px 0"><div><strong>#${h.no} ${safe(h.name)}</strong><div class="muted" style="font-size:12px">Fixed $${Number(h.odds).toFixed(2)} · raw implied ${(100/Number(h.odds)).toFixed(1)}%</div></div><strong>${all?(100/Number(h.odds)/book*100).toFixed(1)+'%':'—'}</strong></div>`).join('');
+}
+$('meeting').addEventListener('change',e=>{db.currentMeeting=e.target.value; db.currentRace=currentMeeting().races[0].number; save();render()});
+$('race').addEventListener('change',e=>{db.currentRace=Number(e.target.value);save();render()});
+$('saveTrack').addEventListener('click',()=>{const m=currentMeeting(),r=currentRace();const count=$('expectedCount').value.trim();if(count && (!Number.isInteger(Number(count))||Number(count)<1||Number(count)>40))return alert('Expected field size must be an integer from 1 to 40.');r.expectedCount=count?Number(count):null;m.track=$('track').value.trim();m.trackSource=$('trackSource').value.trim();save();render();});
+$('newMeeting').addEventListener('click',()=>{
+  const venue=prompt('Meeting venue (e.g. Caulfield)'); if(!venue?.trim())return;
+  const date=prompt('Date YYYY-MM-DD (Melbourne time)','2026-11-03'); if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date)))return alert('Enter a valid ISO date.');
+  const id=venue.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-'+date;
+  if(db.meetings.some(m=>m.id===id))return alert('Meeting already exists.');
+  db.meetings.push({id,venue:venue.trim(),date,track:'',trackSource:'',races:[{number:1,name:'Race 1 (edit by adding other races)',time:'',distance:null,runners:[]}]});
+  db.currentMeeting=id;db.currentRace=1;save();render();
+});
+$('editRace').addEventListener('click',()=>{
+  const r=currentRace();
+  const name=prompt('Race name',r.name);if(name===null||!name.trim())return;
+  const d=prompt('Distance in metres (leave blank if unknown)',r.distance??'');if(d===null)return;
+  const t=prompt('Scheduled Melbourne start time HH:MM (leave blank if unknown)',r.time||'');if(t===null)return;
+  const distance=d.trim()===''?null:Number(d);if(distance!==null&&(!(distance>0)||!Number.isFinite(distance)))return alert('Distance must be a positive number.');
+  r.name=name.trim();r.distance=distance;r.time=t.trim();save();render();
+});
+$('newRace').addEventListener('click',()=>{
+  const m=currentMeeting(), number=Number(prompt('Race number (e.g. 2)'));
+  if(!Number.isInteger(number)||number<1||number>30)return alert('Enter a race number from 1 to 30.');
+  if(m.races.some(r=>r.number===number))return alert('This race already exists.');
+  const name=prompt('Race name',`Race ${number}`)||`Race ${number}`;
+  const distance=Number(prompt('Distance in metres (leave blank if unknown)'))||null;
+  const time=prompt('Scheduled start time in Melbourne time (HH:MM)','')||'';
+  m.races.push({number,name:name.trim(),distance,time,runners:[]});m.races.sort((a,b)=>a.number-b.number);db.currentRace=number;save();render();
+});
+$('runnerForm').addEventListener('submit',e=>{
+  e.preventDefault();const r=currentRace();const no=Number($('horseNo').value),name=$('horseName').value.trim(), odds=$('horseOdds').value===''?null:Number($('horseOdds').value);
+  if(!no||!name)return alert('Number and horse name are required.');
+  if(r.runners.some(h=>h.no===no))return alert('Runner number exists in this race. Edit its odds below, or remove and add again.');
+  if(odds!==null&&!(odds>1))return alert('Decimal odds must exceed 1.');
+  r.runners.push({no,name,odds,barrier:$('horseBarrier').value,weight:$('horseWeight').value,jockey:$('horseJockey').value.trim(),trainer:$('horseTrainer').value.trim(),scratched:false,oddsSource:$('oddsSource').value.trim(),oddsAt:odds?new Date().toISOString():null});
+  const previousSource=$('oddsSource').value;save();$('runnerForm').reset();$('oddsSource').value=previousSource;render();
+});
+$('bulkAdd').addEventListener('click',()=>{
+  const r=currentRace(), lines=$('bulkInput').value.trim().split(/\r?\n/);let count=0,errors=[];
+  for(const [i,line] of lines.entries()){
+    if(!line.trim())continue; const p=line.split('|').map(x=>x.trim()), no=Number(p[0]),name=p[1],barrier=p[2]||'',weight=p[3]||'',odds=p[4]?Number(p[4]):null;
+    if(!Number.isInteger(no)||no<1||!name||p.length<2||(odds!==null&&!(odds>1))||r.runners.some(h=>h.no===no)){errors.push(i+1);continue;}
+    r.runners.push({no,name,barrier,weight,odds,jockey:'',trainer:'',scratched:false,oddsSource:$('oddsSource').value.trim()||'Bulk entry · source not recorded',oddsAt:odds?new Date().toISOString():null});count++;
+  }
+  save();render();alert(`Added ${count} runners.${errors.length?' Skipped lines: '+errors.join(', '):''}`);if(count)$('bulkInput').value='';
+});
+$('runners').addEventListener('change',e=>{
+  const r=currentRace(),no=Number(e.target.dataset.odds||e.target.dataset.scratch);if(!no)return;
+  const h=r.runners.find(x=>x.no===no);if(!h)return;
+  if(e.target.dataset.odds){const n=e.target.value===''?null:Number(e.target.value);if(n!==null&&!(n>1)){alert('Decimal odds must exceed 1.');return;}h.odds=n;h.oddsAt=n?new Date().toISOString():null;h.oddsSource=n?($('oddsSource').value.trim()||prompt('Source for these updated odds (bookmaker/page):',h.oddsSource||'')||'Source not recorded'):'';}
+  else h.scratched=e.target.value==='scratched';
+  save();render();
+});
+$('runners').addEventListener('click',e=>{
+  const btn=e.target.closest('[data-delete]');if(!btn)return;
+  const r=currentRace(),no=Number(btn.dataset.delete),h=r.runners.find(x=>x.no===no);
+  if(!h||!confirm('Remove '+h.name+' from this race?'))return;
+  r.runners=r.runners.filter(x=>x.no!==no);save();render();
+});
+$('export').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='racelab-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+});
+$('importButton').addEventListener('click',()=>$('importFile').click());
+$('importFile').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{const data=JSON.parse(await file.text());if(data.version!==1||!Array.isArray(data.meetings)||!data.meetings.length||data.meetings.some(m=>!Array.isArray(m.races)||!m.races.length||m.races.some(r=>!Array.isArray(r.runners))))throw Error('Unsupported or incomplete RaceLab backup');
+    if(!confirm('Replace all existing local RaceLab data with this backup? Export your current data first if needed.'))return;
+    db=data;save();render();alert('Backup imported locally.');
+  }catch(err){alert('Could not import backup: '+err.message);}finally{e.target.value='';}
+});
+save();render();
+</script>
+</body>
+</html>
