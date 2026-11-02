@@ -4,7 +4,7 @@ RaceLab is a mobile-friendly, paper-only racing probability experiment.
 
 ## GitHub Actions data refresh
 
-The app reads `data/latest.json`. GitHub Actions refreshes that file from the PuntersEdge API every 30 minutes and can also be run manually.
+The app reads `data/latest.json`. GitHub Actions discovers the daily card once, then checks the clock every five minutes and calls PuntersEdge only once in the final pre-race window. It can also be run manually.
 
 Add the API key once:
 
