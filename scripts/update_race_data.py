@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
@@ -36,7 +37,10 @@ def fetch_races(api_key: str) -> list[dict]:
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+            body = response.read()
+            if response.headers.get("Content-Encoding", "").lower() == "gzip" or body[:2] == b"\x1f\x8b":
+                body = gzip.decompress(body)
+            payload = json.loads(body.decode("utf-8"))
     except Exception as exc:
         raise RuntimeError(f"PuntersEdge request failed: {exc}") from exc
 
