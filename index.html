@@ -56,9 +56,9 @@
   </style>
 </head>
 <body>
-<header><div class="inner"><h1>RaceLab</h1><div class="intro">Free personal racing experiment · Phase 3 foundation · paper-first</div></div></header>
+<header><div class="inner"><h1>RaceLab</h1><div class="intro">Free personal racing experiment · v0.2 · personal racecard import · paper-first</div></div></header>
 <main>
-  <div class="notice" style="margin-bottom:14px"><strong>No live feed.</strong> Meeting schedules are preloaded; horse names, scratchings, form and odds must be entered from sources you check. Odds are never invented. Data stays in this browser unless you export it.</div>
+  <div class="notice" style="margin-bottom:14px"><strong>No live feed.</strong> Meeting schedules are preloaded. Dated personal racecard snapshots can be merged below; they do not update automatically. Recheck all race-day changes. Odds are never invented. Data stays in this browser unless you export it.</div>
 
   <section class="card">
     <h2>1 · Meeting & race</h2>
@@ -66,7 +66,7 @@
       <div class="field"><label for="meeting">Meeting</label><select id="meeting"></select></div>
       <div class="field"><label for="race">Race</label><select id="race"></select></div>
     </div>
-    <p id="raceDetails" class="muted"></p>
+    <p id="raceDetails" class="muted"></p><p id="fieldProvenance" class="intro"></p>
     <div class="flex"><button type="button" class="secondary mini" id="newMeeting">+ Meeting</button><button type="button" class="secondary mini" id="newRace">+ Race</button><button type="button" class="secondary mini" id="editRace">Edit race</button></div>
     <div style="margin-top:14px" class="row2">
       <div class="field"><label for="expectedCount">Confirmed active field size</label><input id="expectedCount" type="number" min="1" max="40" placeholder="Check official field" /></div>
@@ -78,7 +78,8 @@
 
   <section class="card">
     <div class="flex between"><h2>2 · Runners</h2><span class="pill" id="runnerCount">0 runners</span></div>
-    <p class="muted">Add runners individually, or paste several using the import format below. No official fields or current prices are included automatically.</p>
+    <p class="muted">Add runners individually, paste several, or merge a racecard snapshot. These snapshots are not live data.</p>
+    <div class="notice" style="margin-bottom:14px"><strong>Load personal racecard JSON</strong><p class="muted">Merge new runners from the downloaded snapshot. Your existing odds and statuses are preserved. Confirm all entries against official sources before any decision.</p><button type="button" class="secondary mini" id="racecardImportButton">Import racecard snapshot</button><input type="file" id="racecardImportFile" accept=".json,application/json" style="display:none"></div>
     <form id="runnerForm">
       <div class="row3">
         <div class="field"><label for="horseNo">No.</label><input id="horseNo" type="number" min="1" max="99" required placeholder="1" /></div>
@@ -157,6 +158,7 @@ function render(){
   $('race').innerHTML=m.races.map(r=>`<option value="${r.number}">R${r.number} · ${safe(r.name)} (${r.time||'?'} · ${r.distance||'?'}m)</option>`).join('');
   $('race').value=String(r.number);
   $('raceDetails').textContent=`Race ${r.number} · ${r.distance||'Unknown'}m · ${r.time||'Unknown'} Melbourne time · programme sourced from VRC (check for changes)`;
+  $('fieldProvenance').textContent=r.fieldCheckedAt?'Source: '+(r.fieldSource||'unknown')+' · snapshot '+stamp(r.fieldCheckedAt)+' · not live':'No runner snapshot imported';
   $('expectedCount').value=r.expectedCount||''; $('track').value=m.track||''; $('trackSource').value=m.trackSource||'';
   const runners=r.runners||[]; const active=runners.filter(h=>!h.scratched);
   $('runnerCount').textContent=runners.length+' entered'; $('activeCount').textContent=active.length;
@@ -240,6 +242,41 @@ $('runners').addEventListener('click',e=>{
 $('export').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='racelab-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+});
+$('racecardImportButton').addEventListener('click',()=>$('racecardImportFile').click());
+$('racecardImportFile').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+    const data=JSON.parse(await file.text());
+    if(data.version!==1||!Array.isArray(data.meetings))throw Error('Not a RaceLab v1 file');
+    let added=0,updated=0,conflicts=0;
+    for(const sm of data.meetings){
+      if(!sm||typeof sm.id!=='string'||!Array.isArray(sm.races))throw Error('Invalid meeting');
+      let m=db.meetings.find(x=>x.id===sm.id);
+      if(!m){m={id:sm.id,venue:String(sm.venue||'Unknown'),date:String(sm.date||''),track:'',trackSource:'',races:[]};db.meetings.push(m);}
+      for(const sr of sm.races){
+        if(!Number.isInteger(Number(sr.number))||!Array.isArray(sr.runners)||sr.runners.length>40)throw Error('Invalid race');
+        let r=m.races.find(x=>x.number===Number(sr.number));
+        if(!r){r={number:Number(sr.number),name:String(sr.name||'Race'),time:String(sr.time||''),distance:Number(sr.distance)||null,runners:[]};m.races.push(r);}
+        for(const sh of sr.runners){
+          const no=Number(sh.no),name=String(sh.name||'').trim();
+          if(!Number.isInteger(no)||no<1||no>99||!name){conflicts++;continue;}
+          const old=r.runners.find(x=>x.no===no);
+          if(old){
+            if(old.name.trim().toLowerCase()!==name.toLowerCase()){conflicts++;continue;}
+            let changed=false;
+            for(const f of ['barrier','weight','jockey','trainer'])if(!old[f]&&sh[f]!=null&&String(sh[f]).trim()){old[f]=String(sh[f]).trim();changed=true;}
+            if(changed)updated++;
+          }else{r.runners.push({no,name,barrier:String(sh.barrier||''),weight:String(sh.weight||''),jockey:String(sh.jockey||''),trainer:String(sh.trainer||''),scratched:!!sh.scratched,odds:null,oddsSource:'',oddsAt:null});added++;}
+        }
+        if(sr.fieldSource)r.fieldSource=String(sr.fieldSource);
+        if(sr.fieldCheckedAt)r.fieldCheckedAt=String(sr.fieldCheckedAt);
+        r.runners.sort((a,b)=>a.no-b.no);
+      }
+      m.races.sort((a,b)=>a.number-b.number);
+    }
+    save();render();alert(`Imported ${added} new runners, filled ${updated} entries; ${conflicts} conflicts. Existing odds/statuses preserved. Check official scratchings before use.`);
+  }catch(err){alert('Import failed: '+err.message)}finally{e.target.value='';}
 });
 $('importButton').addEventListener('click',()=>$('importFile').click());
 $('importFile').addEventListener('change',async e=>{
