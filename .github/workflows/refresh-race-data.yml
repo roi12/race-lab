@@ -1,0 +1,44 @@
+name: Refresh RaceLab race data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,37 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-racelab-data
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out RaceLab
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch PuntersEdge data
+        run: python scripts/update_race_data.py
+        env:
+          PUNTERS_EDGE_API_KEY: \${{ secrets.PUNTERS_EDGE_API_KEY }}
+          RACE_DATA_PATH: data/latest.json
+
+      - name: Commit changed snapshot
+        run: |
+          if git diff --quiet -- data/latest.json; then
+            echo "No race-data change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          git commit -m "Refresh RaceLab race data"
+          git push
