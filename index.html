@@ -60,6 +60,19 @@
     .weight-entry .flex {margin-bottom:4px}
     .weight-entry input {padding:0;min-height:28px}
     .table-scroll {overflow-x:auto;}
+    .cockpit-stats {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+    .cockpit-stat {padding:10px;background:#0b202a;border-radius:11px;min-width:0}
+    .cockpit-stat strong{font-size:20px;display:block}
+    .cockpit-stat small {display:block;font-size:11px}
+    .status-line {padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:9px}
+    .status-line:last-child{border-bottom:0}
+    .status-line .status-main {min-width:0;flex:1}
+    .status-line .status-detail {font-size:12px;color:var(--muted);line-height:1.4}
+    .status-mark {font-size:12px;font-weight:700;color:#b1c1c9}
+    .status-mark.ready {color:#9ee0ca}
+    .runbook-steps {padding-left:22px;line-height:1.55;font-size:14px}
+    .runbook-steps li {margin-bottom:7px}
+    .action-links a {color:var(--accent);display:inline-block;margin-right:12px;margin-top:8px;font-size:13px}
     .result-table {width:100%;border-collapse:collapse;font-size:13px;min-width:500px}
     .result-table td,.result-table th {padding:9px 6px;text-align:right;border-bottom:1px solid var(--line)}
     .result-table td:first-child,.result-table th:first-child{text-align:left}
@@ -71,9 +84,9 @@
   </style>
 </head>
 <body>
-<header><div class="inner"><h1>RaceLab</h1><div class="intro">Free personal racing experiment · v0.3 · probability model · paper-first</div></div></header>
+<header><div class="inner"><h1>RaceLab</h1><div class="intro">Free personal racing experiment · v0.4 · race-day cockpit · paper-first</div></div></header>
 <main>
-  <nav class="navlinks" aria-label="Sections"><a href="#analysis">Probability model</a><a href="#journal">Paper journal</a><a href="#review">Review</a></nav>
+  <nav class="navlinks" aria-label="Sections"><a href="#runbook">Race-day cockpit</a><a href="#analysis">Probability model</a><a href="#journal">Paper journal</a><a href="#review">Review</a></nav>
   <div class="notice" style="margin-bottom:14px"><strong>No live feed.</strong> Meeting schedules are preloaded. Dated personal racecard snapshots can be merged below; they do not update automatically. Recheck all race-day changes. Odds are never invented. Data stays in this browser unless you export it.</div>
 
   <section class="card">
@@ -90,6 +103,38 @@
       <div class="field"><label for="trackSource">Track source / checked time</label><input id="trackSource" placeholder="e.g. official site · 08:10 AEDT" /></div>
     </div>
     <div style="margin-top:9px"><button type="button" id="saveTrack" class="secondary mini">Save meeting / race facts</button></div>
+  </section>
+
+  <section class="card" id="runbook">
+    <div class="flex between"><h2>Phase 5 · Race-day cockpit</h2><span class="pill" id="runbookClock">Melbourne time</span></div>
+    <div class="notice" id="storageNotice"><strong>Personal, local data.</strong> GitHub publishes the code only, not the horses, odds or backups stored on your phone. A JSON backup is not automatically imported. Data is never a live feed.</div>
+    <div class="cockpit-stats" aria-label="Data registered on this device">
+      <div class="cockpit-stat"><small>Races with runners</small><strong id="dayFields">0/10</strong></div>
+      <div class="cockpit-stat"><small>Saved runners</small><strong id="dayRunners">0</strong></div>
+      <div class="cockpit-stat"><small>Fully priced races</small><strong id="dayPriced">0/10</strong></div>
+    </div>
+    <p id="dayReadiness" class="notice warning" role="status">Checking the information saved on this phone…</p>
+    <div class="flex"><button class="secondary mini" id="cockpitImportSnapshot" type="button">Import personal racecard JSON</button><button class="secondary mini" id="cockpitRestore" type="button">Restore my backup JSON</button><button class="secondary mini" id="cockpitRefresh" type="button">Refresh status</button></div>
+    <small>An import is manual and local. Confirm the official field, withdrawals and prices again on race day. Restoring a full backup replaces existing browser data after confirmation; a racecard merge preserves existing data.</small>
+    <h3 style="margin-top:18px">All races · saved-data status</h3>
+    <p class="muted">Shows what <em>this browser</em> knows. A green indicator means the data passed local checks, not that the information is officially confirmed.</p>
+    <div id="dayRaceList"></div>
+    <h3 style="margin-top:18px">Selected race checklist</h3>
+    <div id="selectedGates" class="notice warning">Select a race to inspect.</div>
+    <div id="racePlan" style="margin-top:12px"></div>
+    <details style="margin-top:16px" open><summary style="cursor:pointer;font-weight:700">Race-day workflow</summary>
+      <ol class="runbook-steps">
+        <li><strong>8:00 am Melbourne:</strong> Consult official acceptances/scratchings and track updates; verify the expected active field for any races you want to study. This is a planning checkpoint, not a guarantee that official updates have been released.</li>
+        <li><strong>60 minutes before the scheduled jump:</strong> Review relevant form and write down sources. Keep uncertain ratings blank. Choose a race; you do not need to analyse all ten.</li>
+        <li><strong>30 minutes before:</strong> Recheck withdrawals, late rider changes, track, and a single bookmaker's fixed-win prices for every active runner. Record one coherent, timestamped odds snapshot.</li>
+        <li><strong>15 minutes before:</strong> Review missing information and the market quality warning. Freeze a <em>pre-race</em> forecast only if its assumptions are defensible; log optional paper-only stakes within the fixed budget. If the field or odds are incomplete, skip this race.</li>
+        <li><strong>At the scheduled jump:</strong> Stop editing predictions for the experiment. Ignore unsupported last-minute tips and do not chase price moves. Actual running times can change; this app does not track delays.</li>
+        <li><strong>After the official result:</strong> Verify the winner from the racing authority, record the source, settle any paper bets, and compare hybrid versus market Brier/log loss.</li>
+        <li><strong>End of meeting:</strong> Export a fresh JSON backup. Review the number of prospective forecasts, data gaps, and performance—do not optimize sliders against today's outcomes.</li>
+      </ol>
+    </details>
+    <div class="action-links" id="runbookSources"></div>
+    <p class="disclaimer" style="margin-top:12px">Scheduled times are not live start confirmations. Sources are external, and RaceLab does not scrape or automatically ingest their content. This is a paper-only learning tool, not a betting recommendation.</p>
   </section>
 
   <section class="card">
@@ -254,6 +299,7 @@ function render(){
   </div>`).join('');
   renderMarket(active,r);
   renderPhase4(m,r,active);
+  renderRunbook(m,r);
 }
 function renderMarket(active,r){
   const priced=active.filter(h=>Number(h.odds)>1); const expected=Number(r.expectedCount)||0;
@@ -523,6 +569,116 @@ function registerPhase4Events(){
     save();render();
   });
 }
+
+
+// Phase 5. A local-data dashboard, not an official race-data feed.
+// It is deliberately read-only: it does not set ratings, odds, or official field counts.
+function raceDateObject(m,r){
+  if(!m.date||!r.time||!/^\d{4}-\d{2}-\d{2}$/.test(m.date)||!/^\d{2}:\d{2}$/.test(r.time))return null;
+  // Resolve the offset for this specific date. Melbourne changes UTC offset during DST.
+  const [year,month,day]=m.date.split('-').map(Number),[hour,minute]=r.time.split(':').map(Number);
+  if(month<1||month>12||hour>23||minute>59||day<1||day>31)return null;
+  const localAsUTC=Date.UTC(year,month-1,day,hour,minute);
+  const tzFormatter=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',timeZoneName:'shortOffset'});
+  let utc=localAsUTC-11*3600000;
+  for(let n=0;n<3;n++){
+    const zone=tzFormatter.formatToParts(new Date(utc)).find(p=>p.type==='timeZoneName')?.value||'';
+    const match=zone.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if(!match)return null;
+    const offset=(match[1]==='+'?1:-1)*(Number(match[2])*60+Number(match[3]||0));
+    utc=localAsUTC-offset*60000;
+  }
+  const dt=new Date(utc);
+  return Number.isFinite(dt.getTime())?dt:null;
+}
+function localRaceStatus(r){
+  const runners=Array.isArray(r.runners)?r.runners:[];
+  const active=runners.filter(h=>!h.scratched);
+  const priced=active.filter(h=>Number(h.odds)>1).length;
+  const expected=Number(r.expectedCount)||0;
+  const full=expected>=2&&expected===active.length&&priced===active.length;
+  const rated=active.reduce((n,h)=>n+FACTORS.filter(([f])=>h.ratings&&h.ratings[f]!==null&&h.ratings[f]!==''&&h.ratings[f]!==undefined&&Number.isFinite(Number(h.ratings[f]))).length,0);
+  const ratingPct=active.length?Math.round(100*rated/(active.length*FACTORS.length)):0;
+  const market=marketStatus(active,r);
+  let state='No runners',status='empty';
+  if(active.length){state='Needs field/odds';status='incomplete';}
+  if(full){state=market.quality?'Priced · local checks OK':'Priced · verify quality';status=market.quality?'ready':'incomplete';}
+  if(r.forecast){state='Forecast frozen';status='ready';}
+  if(r.result){state='Result recorded';status='ready';}
+  return {total:runners.length,active:active.length,priced,expected,full,ratingPct,market,state,status};
+}
+function formatRaceTime(dt){return dt?new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',hour:'numeric',minute:'2-digit',hour12:true}).format(dt):'Not scheduled';}
+function nextStage(m,r){
+  const t=raceDateObject(m,r);
+  if(!t)return 'No scheduled jump time — manually verify programme';
+  const ms=t.getTime()-Date.now();
+  if(ms<=0)return 'Scheduled jump passed · results/review only';
+  const mins=Math.ceil(ms/60000);
+  if(mins<=15)return 'Final minutes · verify official changes; freeze or skip';
+  if(mins<=30)return 'Final market snapshot · recheck scratchings';
+  if(mins<=60)return 'Review form and source notes';
+  return 'Preparation · official field and track checks';
+}
+function updateRunbookClock(){
+  const el=$('runbookClock');if(!el)return;
+  const fmt=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+  el.textContent=fmt.format(new Date())+' Melbourne';
+}
+function renderRunbook(m,r){
+  updateRunbookClock();
+  const statuses=m.races.map(q=>({r:q,s:localRaceStatus(q)}));
+  $('dayFields').textContent=statuses.filter(x=>x.s.total>0).length+'/'+statuses.length;
+  $('dayRunners').textContent=statuses.reduce((n,x)=>n+x.s.total,0);
+  $('dayPriced').textContent=statuses.filter(x=>x.s.full).length+'/'+statuses.length;
+  const cur=localRaceStatus(r),lack=[];
+  if(!cur.active)lack.push('no active runners saved');
+  if(!cur.expected)lack.push('confirmed active field size not entered');
+  else if(cur.expected!==cur.active)lack.push('active count '+cur.active+' differs from expected '+cur.expected);
+  if(cur.active&&cur.priced<cur.active)lack.push((cur.active-cur.priced)+' active runners have no fixed-win odds');
+  if(cur.active&&cur.ratingPct<50)lack.push('form evidence coverage is '+cur.ratingPct+'% (below 50%)');
+  if(cur.market.valid&&!cur.market.quality)lack.push(...cur.market.reasons);
+  const sourceTrack=String(m.trackSource||'').trim();
+  if(!m.track||!sourceTrack)lack.push('track rating/source not recorded');
+  $('dayReadiness').className='notice '+(lack.length?'warning':'');
+  $('dayReadiness').textContent=lack.length?
+    'R'+r.number+' · data on this device is incomplete: '+lack.join('; ')+'. No verified model recommendation can be drawn from these gaps.':
+    'R'+r.number+' · saved data meets local completeness checks. Still manually confirm official race-day changes before use; no live updates are connected.';
+  $('dayRaceList').innerHTML=statuses.slice().sort((a,b)=>(a.r.time||'99:99').localeCompare(b.r.time||'99:99')).map(({r:q,s})=>{
+    const selected=q.number===r.number;
+    const details=s.active+' active · '+s.priced+' priced'+(s.expected?' / '+s.expected+' expected':' · expected unknown')+' · '+s.ratingPct+'% ratings';
+    return `<div class="status-line"><div class="status-main"><strong>R${q.number} · ${safe(q.time||'time unknown')} · ${safe(q.name)}</strong><div class="status-detail">${safe(details)} · ${safe(s.state)}</div></div><button type="button" class="secondary mini" data-open-race="${q.number}" ${selected?'disabled':''}>${selected?'Selected':'Open'}</button></div>`;
+  }).join('');
+  const gates=[
+    [cur.active>0,'Runner list saved',cur.total+' entries; '+cur.active+' active'],
+    [cur.expected>=2&&cur.expected===cur.active,'Field count matches','Expected active count: '+(cur.expected||'unknown')+' · independently verify scratchings'],
+    [cur.full,'Full fixed-win market recorded',cur.priced+' / '+cur.active+' active runners priced'],
+    [cur.market.valid&&cur.market.quality,'Single-source, recent market snapshot',cur.market.valid?(cur.market.quality?'Passed automated timestamps/source checks':cur.market.reasons.join('; ')):'Full active field is required'],
+    [cur.ratingPct>=50,'At least 50% evidence coverage',cur.ratingPct+'% of ratings entered; coverage does not certify quality'],
+    [!!m.track&&!!sourceTrack,'Track/source recorded',m.track?m.track+' · '+(sourceTrack||'source missing'):'Unknown'],
+    [!!r.forecast,'Forecast frozen',r.forecast?'Saved '+stamp(r.forecast.at):'Not yet frozen'],
+    [!!r.result,'Official result logged',r.result?'Source: '+(r.result.source||'unspecified'):'Only after the race']
+  ];
+  $('selectedGates').innerHTML=gates.map(([ok,title,note])=>`<div class="status-line"><div class="status-main"><strong>${safe(title)}</strong><div class="status-detail">${safe(note)}</div></div><span class="status-mark ${ok?'ready':''}">${ok?'✓ Saved':'○ Missing'}</span></div>`).join('');
+  $('selectedGates').className='notice'+(cur.full&&cur.market.quality?'':' warning');
+  const t=raceDateObject(m,r);
+  const timed=t?(delta)=>formatRaceTime(new Date(t.getTime()+delta*60000)):(delta)=>'Unknown';
+  $('racePlan').innerHTML=`<div class="notice"><strong>R${r.number} · scheduled ${safe(r.time||'unknown')} Melbourne time</strong><p style="margin:6px 0">${safe(nextStage(m,r))}</p><div class="row2" style="font-size:13px"><div>Form review: <strong>${safe(timed(-60))}</strong></div><div>Odds/scratchings: <strong>${safe(timed(-30))}</strong></div><div>Freeze/skip: <strong>${safe(timed(-15))}</strong></div><div>Scheduled jump: <strong>${safe(timed(0))}</strong></div></div></div>`;
+  const isFlemingtonCup=m.date==='2026-11-03'&&m.venue.toLowerCase()==='flemington';
+  $('runbookSources').innerHTML=isFlemingtonCup?
+    '<a href="https://www.vrc.com.au/race-days-and-events/2026-2027/lexus-melbourne-cup-day/" target="_blank" rel="noopener noreferrer">VRC programme</a><a href="https://www.racing.com/form/2026-11-03/flemington/scratchings" target="_blank" rel="noopener noreferrer">Race-day scratchings</a><a href="https://www.racing.com/form/2026-11-03/flemington/" target="_blank" rel="noopener noreferrer">Racing.com racecards/results</a>':
+    '<a href="https://www.racingaustralia.horse/" target="_blank" rel="noopener noreferrer">Racing Australia · verify current meeting</a>';
+}
+$('cockpitImportSnapshot').addEventListener('click',()=>$('racecardImportFile').click());
+$('cockpitRestore').addEventListener('click',()=>$('importFile').click());
+$('cockpitRefresh').addEventListener('click',()=>render());
+$('dayRaceList').addEventListener('click',e=>{
+  const button=e.target.closest('[data-open-race]');if(!button)return;
+  db.currentRace=Number(button.dataset.openRace);save();render();
+});
+setInterval(()=>{updateRunbookClock();if(currentMeeting()&&currentRace()){
+ const m=currentMeeting(),r=currentRace();const t=raceDateObject(m,r);
+ if(t){const p=$('racePlan');const status=nextStage(m,r);const first=p.querySelector('p');if(first)first.textContent=status;}
+ }},30000);
 
 ensurePhase4();
 registerPhase4Events();
