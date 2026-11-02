@@ -362,6 +362,7 @@ def normalise(
                 raw_runner.get("scratched")
                 or raw_runner.get("is_scratched")
                 or str(runner_number) in scratch_numbers
+                or bool((form_runner or {}).get("scratched"))
             )
             old_runner = previous_runners.get(str(runner_number), {})
             form_runner = form_runner_by_number(form_payload, runner_number, name)
@@ -385,10 +386,10 @@ def normalise(
             runner = {
                 "no": int(runner_number),
                 "name": name,
-                "barrier": str(raw_runner.get("barrier") or ""),
-                "weight": str(raw_runner.get("weight_kg", raw_runner.get("weight")) or ""),
-                "jockey": str(raw_runner.get("jockey") or ""),
-                "trainer": str(raw_runner.get("trainer") or ""),
+                "barrier": str(raw_runner.get("barrier") or (form_runner or {}).get("barrier") or ""),
+                "weight": str(raw_runner.get("weight_kg", raw_runner.get("weight")) or (form_runner or {}).get("weight_kg") or ""),
+                "jockey": str(raw_runner.get("jockey") or (form_runner or {}).get("jockey") or ""),
+                "trainer": str(raw_runner.get("trainer") or (form_runner or {}).get("trainer") or ""),
                 "scratched": scratched,
                 "odds": price,
                 "oddsSource": f"PuntersEdge:{bookmaker}" if bookmaker else "",
