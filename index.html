@@ -378,11 +378,14 @@ function mergeRacecardSnapshot(data){
   for(const sm of data.meetings){
     if(!sm||typeof sm.id!=='string'||!Array.isArray(sm.races))throw Error('Invalid meeting');
     let m=db.meetings.find(x=>x.id===sm.id);
-    if(!m){m={id:sm.id,venue:String(sm.venue||'Unknown'),date:String(sm.date||''),track:'',trackSource:'',races:[]};db.meetings.push(m);}
+    if(!m){m={id:sm.id,venue:String(sm.venue||'Unknown'),date:String(sm.date||''),track:'',trackSource:'',programSource:'',races:[]};db.meetings.push(m);}
+    if(!String(m.track||'').trim()&&sm.track!=null)m.track=String(sm.track);
+    if(!String(m.trackSource||'').trim()&&sm.trackSource!=null)m.trackSource=String(sm.trackSource);
+    if(!String(m.programSource||'').trim()&&sm.programSource!=null)m.programSource=String(sm.programSource);
     for(const sr of sm.races){
       if(!Number.isInteger(Number(sr.number))||!Array.isArray(sr.runners)||sr.runners.length>40)throw Error('Invalid race');
       let r=m.races.find(x=>x.number===Number(sr.number));
-      if(!r){r={number:Number(sr.number),name:String(sr.name||'Race'),time:String(sr.time||''),distance:Number(sr.distance)||null,runners:[]};m.races.push(r);}
+      if(!r){r={number:Number(sr.number),name:String(sr.name||'Race'),time:String(sr.time||''),distance:Number(sr.distance)||null,expectedCount:null,runners:[]};m.races.push(r);}
       for(const sh of sr.runners){
         const no=Number(sh.no),name=String(sh.name||'').trim();
         if(!Number.isInteger(no)||no<1||no>99||!name){conflicts++;continue;}
@@ -396,6 +399,8 @@ function mergeRacecardSnapshot(data){
       }
       if(sr.fieldSource)r.fieldSource=String(sr.fieldSource);
       if(sr.fieldCheckedAt)r.fieldCheckedAt=String(sr.fieldCheckedAt);
+      const snapshotExpected=Number(sr.expectedCount);
+      if((r.expectedCount===null||r.expectedCount===undefined||r.expectedCount==='')&&Number.isFinite(snapshotExpected)&&snapshotExpected>=1)r.expectedCount=snapshotExpected;
       r.runners.sort((a,b)=>a.no-b.no);
     }
     m.races.sort((a,b)=>a.number-b.number);
