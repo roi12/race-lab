@@ -3,7 +3,11 @@ name: Refresh RaceLab race data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "7,37 * * * *"
+    # Daily discovery run. 19:07 UTC is morning in Melbourne during AEDT.
+    - cron: "7 19 * * *"
+    # This is only a clock. The script calls PuntersEdge only in the
+    # final pre-race window, not on every clock tick.
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -25,10 +29,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Fetch PuntersEdge data
-        run: python scripts/update_race_data.py
+      - name: Discover the daily card
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '7 19 * * *'
+        run: python scripts/update_race_data.py --force
         env:
-          PUNTERS_EDGE_API_KEY: \${{ secrets.PUNTERS_EDGE_API_KEY }}
+          PUNTERS_EDGE_API_KEY: ${{ secrets.PUNTERS_EDGE_API_KEY }}
+          RACE_DATA_PATH: data/latest.json
+
+      - name: Refresh the final pre-race window
+        if: github.event_name == 'schedule' && github.event.schedule == '*/5 * * * *'
+        run: python scripts/update_race_data.py --scheduled
+        env:
+          PUNTERS_EDGE_API_KEY: ${{ secrets.PUNTERS_EDGE_API_KEY }}
           RACE_DATA_PATH: data/latest.json
 
       - name: Commit changed snapshot
@@ -38,7 +50,7 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot].com"
           git add data/latest.json
           git commit -m "Refresh RaceLab race data"
           git push
