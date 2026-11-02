@@ -233,6 +233,7 @@
     </details>
     <h3 style="margin-top:18px">Runner evidence ratings</h3>
     <p class="muted">Use the same rating rubric for all horses. 0 = strongly negative evidence; 2–3 = mixed; 5 = strongly positive. Missing remains unknown. Avoid scoring after results are known.</p>
+    <div id="ratingSourceNote" class="notice" style="margin:10px 0">Form ratings are loaded from the selected race data when available. Missing factors remain unknown.</div>
     <div id="ratingGrid"></div>
     <h3 style="margin-top:20px">Estimated win probabilities</h3>
     <div id="modelWarning" class="notice warning" style="margin:10px 0">Enter complete market data first.</div>
@@ -518,10 +519,16 @@ function ensurePhase4(){
 function profileFor(r){const d=Number(r.distance);return d>0&&d<=1200?'sprint':d>=2400?'staying':'middle';}
 function modelSettings(r){ensurePhase4();return db.model.profiles[profileFor(r)];}
 function normalizedWeights(r){const w=modelSettings(r);const sum=FACTORS.reduce((a,[k])=>a+Math.max(0,Number(w[k])||0),0);return Object.fromEntries(FACTORS.map(([k])=>[k,sum?Math.max(0,Number(w[k])||0)/sum:0]));}
-function scoreHorse(h,w){return FACTORS.reduce((s,[k])=>{
-  const x=h.ratings&&h.ratings[k];
-  return x===null||x===undefined||x===''||!Number.isFinite(Number(x))?s:s+w[k]*(Number(x)-2.5)/2.5;
-},0);}
+function scoreHorse(h,w){
+  let score=0,available=0;
+  for(const [k] of FACTORS){
+    const x=h.ratings&&h.ratings[k];
+    if(x===null||x===undefined||x===''||!Number.isFinite(Number(x)))continue;
+    score+=w[k]*(Number(x)-2.5)/2.5;
+    available+=w[k];
+  }
+  return available?score/available:0;
+}
 function ratingCoverage(active){const count=active.reduce((s,h)=>s+FACTORS.filter(([k])=>h.ratings&&h.ratings[k]!==''&&h.ratings[k]!=null&&Number.isFinite(Number(h.ratings[k]))).length,0);return active.length?count/(active.length*FACTORS.length):0;}
 function marketStatus(active,r){
   const expected=Number(r.expectedCount)||0;
@@ -554,13 +561,20 @@ function renderPhase4(m,r,active){
   $('gamma').value=db.model.gamma; $('gammaLabel').textContent=Number(db.model.gamma).toFixed(2);
   $('overlay').value=db.model.overlay;
   $('coverage').textContent=(calc.coverage*100).toFixed(0)+'% of feature ratings supplied';
+  const autoRated=active.filter(h=>String(h.ratingSource||'').toLowerCase().includes('puntersedge form')).length;
+  const autoRuns=active.reduce((n,h)=>n+(Number(h.form?.runsAvailable)||0),0);
+  $('ratingSourceNote').className='notice '+(autoRated?'':'warning');
+  $('ratingSourceNote').textContent=autoRated
+    ? autoRated+'/'+active.length+' runners have automatic ratings from PuntersEdge recent form ('+autoRuns+' stored starts across the field). Recent form, distance fit and track-condition fit are filled only when the source has evidence; class, weight and barrier remain unknown unless supported. This heuristic is not calibrated.'
+    : 'No automatic PuntersEdge form ratings are available for this race yet. The hybrid will match the market until ratings are supplied.';
   $('weightControls').innerHTML=FACTORS.map(([k,title])=>`<div class="weight-entry"><div class="flex between"><label for="wt-${k}">${safe(title)}</label><span id="wtval-${k}">${safe(w[k])} raw weight</span></div><input type="range" data-wt="${k}" id="wt-${k}" min="0" max="50" step="1" value="${safe(w[k])}" /></div>`).join('');
   $('ratingGrid').innerHTML=active.length?active.map(h=>`<div class="rating-row"><strong>#${h.no} ${safe(h.name)}</strong><div class="rating-fields">${FACTORS.map(([k,title])=>`<div class="field"><label for="rating-${h.no}-${k}">${safe(title)}</label><select id="rating-${h.no}-${k}" data-rating="${k}" data-runner="${h.no}"><option value="">Unknown</option>${[0,1,2,3,4,5].map(n=>`<option value="${n}" ${h.ratings&&String(h.ratings[k])===String(n)?'selected':''}>${n} / 5</option>`).join('')}</select></div>`).join('')}</div></div>`).join(''):'<p class="empty">Add runners to score their form.</p>';
   const coverageOK=calc.coverage>=.5;
+  const noAdjustment=calc.rows.length&&calc.rows.every(h=>Math.abs(h.model-h.market)<0.0005);
   $('modelWarning').className='notice '+(!calc.status.valid||!calc.status.quality||!coverageOK?'warning':'');
   $('modelWarning').textContent=!calc.status.valid?'Cannot compute an all-runner probability distribution: '+calc.status.reasons.join(' '):
-    'Model is experimental, not validated. '+(!calc.status.quality?calc.status.reasons.join(' '):'All odds recorded with a consistent, recent source. ')+(!coverageOK?' Fewer than half of the ratings are populated; overlay flags are suppressed.':'');
-  $('modelTable').innerHTML=calc.rows.length?`<div class="table-scroll"><table class="result-table"><thead><tr><th>Horse</th><th>Odds</th><th>Market</th><th>Hybrid</th><th>Est. EV</th><th>Overlay*</th></tr></thead><tbody>${calc.rows.map(h=>{
+    'Model is experimental, not validated. '+(!calc.status.quality?calc.status.reasons.join(' '):'All odds recorded with a consistent, recent source. ')+(!coverageOK?' Fewer than half of the ratings are populated; overlay flags are suppressed.':'')+(noAdjustment?' Automatic form inputs currently make no meaningful change to the market baseline.':'');
+  $('modelTable').innerHTML=calc.rows.length?`<div class="table-scroll"><table class="result-table"><thead><tr><th>Horse</th><th>Odds</th><th>Market</th><th>Hybrid<br><small>form-adjusted</small></th><th>Est. EV</th><th>Overlay*</th></tr></thead><tbody>${calc.rows.map(h=>{
     const flag=calc.status.quality&&coverageOK&&h.ev*100>=Number(db.model.overlay);
     return `<tr><td>#${h.no} ${safe(h.name)}</td><td>$${h.odds.toFixed(2)}</td><td>${(100*h.market).toFixed(1)}%</td><td><strong>${(100*h.model).toFixed(1)}%</strong></td><td class="${h.ev>0?'good-text':'warn-text'}">${h.ev>=0?'+':''}${(100*h.ev).toFixed(1)}%</td><td>${flag?'<span class="good-text">Potential*</span>':'—'}</td></tr>`;
   }).join('')}</tbody></table></div><small>*Estimated discrepancies are NOT reliable betting recommendations. Break-even uses raw 1/odds; market baseline is normalized. Feature ratings and gamma have not been calibrated.</small>`:'<p class="empty">Enter odds for every active runner and the confirmed field size to see estimates.</p>';
