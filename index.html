@@ -114,7 +114,7 @@
       <div class="cockpit-stat"><small>Fully priced races</small><strong id="dayPriced">0/10</strong></div>
     </div>
     <p id="dayReadiness" class="notice warning" role="status">Checking the information saved on this phone…</p>
-    <div class="flex"><button class="secondary mini" id="githubImportSnapshot" type="button">Load GitHub racecard</button><button class="secondary mini" id="cockpitImportSnapshot" type="button">Import local racecard JSON</button><button class="secondary mini" id="cockpitRestore" type="button">Restore my backup JSON</button><button class="secondary mini" id="cockpitRefresh" type="button">Refresh status</button></div>
+    <div class="flex"><button class="secondary mini" id="githubImportSnapshot" type="button">Refresh GitHub data</button><button class="secondary mini" id="cockpitImportSnapshot" type="button">Import local racecard JSON</button><button class="secondary mini" id="cockpitRestore" type="button">Restore my backup JSON</button><button class="secondary mini" id="cockpitRefresh" type="button">Refresh status</button></div>
     <small>An import is manual and local. Confirm the official field, withdrawals and prices again on race day. Restoring a full backup replaces existing browser data after confirmation; a racecard merge preserves existing data.</small>
     <h3 style="margin-top:18px">All races · saved-data status</h3>
     <p class="muted">Shows what <em>this browser</em> knows. A green indicator means the data passed local checks, not that the information is officially confirmed.</p>
@@ -372,16 +372,16 @@ $('export').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='racelab-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 });
-function mergeRacecardSnapshot(data){
+function mergeRacecardSnapshot(data,refreshMarket=false){
   if(data.version!==1||!Array.isArray(data.meetings))throw Error('Not a RaceLab v1 file');
   let added=0,updated=0,conflicts=0;
   for(const sm of data.meetings){
     if(!sm||typeof sm.id!=='string'||!Array.isArray(sm.races))throw Error('Invalid meeting');
     let m=db.meetings.find(x=>x.id===sm.id);
     if(!m){m={id:sm.id,venue:String(sm.venue||'Unknown'),date:String(sm.date||''),track:'',trackSource:'',programSource:'',races:[]};db.meetings.push(m);}
-    if(!String(m.track||'').trim()&&sm.track!=null)m.track=String(sm.track);
-    if(!String(m.trackSource||'').trim()&&sm.trackSource!=null)m.trackSource=String(sm.trackSource);
-    if(!String(m.programSource||'').trim()&&sm.programSource!=null)m.programSource=String(sm.programSource);
+    if((refreshMarket||!String(m.track||'').trim())&&sm.track!=null)m.track=String(sm.track);
+    if((refreshMarket||!String(m.trackSource||'').trim())&&sm.trackSource!=null)m.trackSource=String(sm.trackSource);
+    if((refreshMarket||!String(m.programSource||'').trim())&&sm.programSource!=null)m.programSource=String(sm.programSource);
     for(const sr of sm.races){
       if(!Number.isInteger(Number(sr.number))||!Array.isArray(sr.runners)||sr.runners.length>40)throw Error('Invalid race');
       let r=m.races.find(x=>x.number===Number(sr.number));
@@ -395,12 +395,22 @@ function mergeRacecardSnapshot(data){
           let changed=false;
           for(const f of ['barrier','weight','jockey','trainer'])if(!old[f]&&sh[f]!=null&&String(sh[f]).trim()){old[f]=String(sh[f]).trim();changed=true;}
           if(changed)updated++;
-        }else{r.runners.push({no,name,barrier:String(sh.barrier||''),weight:String(sh.weight||''),jockey:String(sh.jockey||''),trainer:String(sh.trainer||''),scratched:!!sh.scratched,odds:null,oddsSource:'',oddsAt:null});added++;}
+        }else{r.runners.push({no,name,barrier:String(sh.barrier||''),weight:String(sh.weight||''),jockey:String(sh.jockey||''),trainer:String(sh.trainer||''),scratched:!!sh.scratched,odds:Number.isFinite(Number(sh.odds))&&Number(sh.odds)>1?Number(sh.odds):null,oddsSource:String(sh.oddsSource||''),oddsAt:sh.oddsAt||null});added++;}
       }
       if(sr.fieldSource)r.fieldSource=String(sr.fieldSource);
       if(sr.fieldCheckedAt)r.fieldCheckedAt=String(sr.fieldCheckedAt);
       const snapshotExpected=Number(sr.expectedCount);
-      if((r.expectedCount===null||r.expectedCount===undefined||r.expectedCount==='')&&Number.isFinite(snapshotExpected)&&snapshotExpected>=1)r.expectedCount=snapshotExpected;
+      if((refreshMarket||r.expectedCount===null||r.expectedCount===undefined||r.expectedCount==='')&&Number.isFinite(snapshotExpected)&&snapshotExpected>=1)r.expectedCount=snapshotExpected;
+      if(refreshMarket)for(const sh of sr.runners){
+        const old=r.runners.find(x=>x.no===Number(sh.no));
+        if(!old)continue;
+        if(typeof sh.scratched==='boolean')old.scratched=sh.scratched;
+        if(!old.oddsSource||/^PuntersEdge:/.test(old.oddsSource)){
+          old.odds=Number.isFinite(Number(sh.odds))&&Number(sh.odds)>1?Number(sh.odds):null;
+          old.oddsSource=String(sh.oddsSource||'');
+          old.oddsAt=sh.oddsAt||null;
+        }
+      }
       r.runners.sort((a,b)=>a.no-b.no);
     }
     m.races.sort((a,b)=>a.number-b.number);
@@ -415,17 +425,20 @@ $('racecardImportFile').addEventListener('change',async e=>{
     save();render();alert(`Imported ${result.added} new runners, filled ${result.updated} entries; ${result.conflicts} conflicts. Existing odds/statuses preserved. Check official scratchings before use.`);
   }catch(err){alert('Import failed: '+err.message)}finally{e.target.value='';}
 });
-$('githubImportSnapshot').addEventListener('click',async ()=>{
+async function loadGitHubSnapshot(silent=false){
   const button=$('githubImportSnapshot');
-  button.disabled=true;button.textContent='Loading GitHub…';
+  if(!button)return;
+  button.disabled=true;button.textContent='Refreshing GitHub…';
   try{
-    const response=await fetch('racelab-flemington-2026-11-03.json',{cache:'no-store'});
-    if(!response.ok)throw Error(`GitHub snapshot unavailable (HTTP ${response.status})`);
-    const result=mergeRacecardSnapshot(await response.json());
-    save();render();alert(`Loaded ${result.added} new runners, filled ${result.updated} entries; ${result.conflicts} conflicts. Existing odds/statuses preserved. Check official scratchings before use.`);
-  }catch(err){alert('Could not load the GitHub snapshot: '+err.message)}
-  finally{button.disabled=false;button.textContent='Load GitHub racecard';}
-});
+    const response=await fetch('data/latest.json',{cache:'no-store'});
+    if(!response.ok)throw Error(`GitHub data unavailable (HTTP ${response.status})`);
+    const result=mergeRacecardSnapshot(await response.json(),true);
+    save();render();
+    if(!silent)alert(`Refreshed ${result.added} new runners, filled ${result.updated} entries; ${result.conflicts} conflicts. Automated odds and scratchings were refreshed where available.`);
+  }catch(err){if(!silent)alert('Could not load GitHub data: '+err.message)}
+  finally{button.disabled=false;button.textContent='Refresh GitHub data';}
+}
+$('githubImportSnapshot').addEventListener('click',()=>loadGitHubSnapshot(false));
 $('importButton').addEventListener('click',()=>$('importFile').click());
 $('importFile').addEventListener('change',async e=>{
   const file=e.target.files[0];if(!file)return;
@@ -702,6 +715,7 @@ setInterval(()=>{updateRunbookClock();if(currentMeeting()&&currentRace()){
 ensurePhase4();
 registerPhase4Events();
 save();render();
+setTimeout(()=>loadGitHubSnapshot(true),200);
 </script>
 </body>
 </html>
