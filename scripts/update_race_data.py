@@ -6,9 +6,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -89,7 +90,41 @@ def quote_for(runner: dict) -> tuple[float | None, str, str]:
     return max(candidates, key=lambda item: item[0])
 
 
-def normalise(races: list[dict]) -> dict:
+def parse_local_race_start(meeting: dict, race: dict) -> datetime | None:
+    date = str(meeting.get("date") or "")
+    time = str(race.get("time") or "")
+    try:
+        return datetime.fromisoformat(f"{date}T{time}").replace(tzinfo=AET)
+    except ValueError:
+        return None
+
+
+def scheduled_refresh_ids(existing: dict) -> set[str]:
+    """Return races in the final pre-race window that have not just refreshed."""
+    now = datetime.now(AET)
+    refresh_ids = set()
+    for meeting in existing.get("meetings", []):
+        for race in meeting.get("races", []):
+            start = parse_local_race_start(meeting, race)
+            if start is None:
+                continue
+            minutes = (start - now).total_seconds() / 60
+            if 0.5 <= minutes <= 6:
+                last = race.get("automatedRefreshAt")
+                if last:
+                    try:
+                        last_at = parse_time(last).astimezone(AET)
+                        if now - last_at < timedelta(minutes=10):
+                            continue
+                    except (TypeError, ValueError):
+                        pass
+                if race.get("raceId"):
+                    refresh_ids.add(str(race["raceId"]))
+    return refresh_ids
+
+
+def normalise(races: list[dict], refresh_ids: set[str] | None = None) -> dict:
+    refresh_ids = refresh_ids or set()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     meetings: dict[str, dict] = {}
 
@@ -168,6 +203,7 @@ def normalise(races: list[dict]) -> dict:
             "raceId": source_race.get("race_id"),
             "marketAgeSeconds": source_race.get("data_age_seconds"),
             "marketStale": bool(source_race.get("stale")),
+            "automatedRefreshAt": generated_at if str(source_race.get("race_id") or "") in refresh_ids else None,
         })
 
     for meeting in meetings.values():
@@ -191,7 +227,29 @@ def main() -> None:
     api_key = os.environ.get("PUNTERS_EDGE_API_KEY", "").strip()
     if not api_key:
         raise SystemExit("Missing PUNTERS_EDGE_API_KEY GitHub secret")
-    output = normalise(fetch_races(api_key))
+
+    mode = sys.argv[1] if len(sys.argv) > 1 else "--force"
+    existing = None
+    if OUTPUT.exists():
+        try:
+            existing = json.loads(OUTPUT.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = None
+
+    if mode == "--scheduled":
+        if not existing:
+            print("No existing snapshot; waiting for the daily discovery run.")
+            return
+        refresh_ids = scheduled_refresh_ids(existing)
+        if not refresh_ids:
+            print("No race in the final pre-race window; no PuntersEdge call made.")
+            return
+    elif mode == "--force":
+        refresh_ids = set()
+    else:
+        raise SystemExit("Use --force or --scheduled")
+
+    output = normalise(fetch_races(api_key), refresh_ids)
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {OUTPUT}: {sum(len(m['races']) for m in output['meetings'])} races")
