@@ -6,7 +6,7 @@ on:
     # Daily discovery run. 19:07 UTC is morning in Melbourne during AEDT.
     - cron: "7 19 * * *"
     # This is only a clock. The script calls PuntersEdge only in the
-    # final pre-race window, not on every clock tick.
+    # final pre-race window, not on every clock tick. Form is refreshed with that race.
     - cron: "*/5 * * * *"
 
 permissions:
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Check out RaceLab
         uses: actions/checkout@v4
